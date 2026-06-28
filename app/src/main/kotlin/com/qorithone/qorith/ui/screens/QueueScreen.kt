@@ -41,6 +41,8 @@ fun QueueScreen(
     val songs = viewModel.songs.collectAsState().value
     val currentPlayingSong = viewModel.currentPlayingSong.collectAsState().value
     val theme = viewModel.currentTheme.collectAsState().value
+    val selectedSongs = viewModel.selectedSongs.collectAsState().value
+    val isSelectMode = viewModel.isSelectMode.collectAsState().value
 
     val backgroundColor = when (theme) {
         "amoled" -> Color(0xFF000000)
@@ -76,7 +78,7 @@ fun QueueScreen(
                 Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textColor)
             }
             Text(
-                "Queue",
+                "Queue (${queueSongs.size})",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
@@ -85,7 +87,17 @@ fun QueueScreen(
 
             Box(modifier = Modifier.weight(1f))
 
-            IconButton(onClick = { /* Menu */ }) {
+            if (isSelectMode) {
+                Text(
+                    "${selectedSongs.size} selected",
+                    fontSize = 12.sp,
+                    color = Color(0xFF39C0F2),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+
+            IconButton(onClick = { viewModel.toggleSelectMode() }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = textColor)
             }
         }
@@ -108,10 +120,14 @@ fun QueueScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 itemsIndexed(queueSongs) { index, song ->
+                    val isSelected = selectedSongs.contains(song.id)
                     QueueItemRow(
                         song = song,
+                        index = index,
                         isPlaying = song.id == currentPlayingSong?.id,
                         isNextUp = index == (queueSongs.indexOf(currentPlayingSong) + 1),
+                        isSelected = isSelected,
+                        isSelectMode = isSelectMode,
                         viewModel = viewModel,
                         textColor = textColor,
                         backgroundColor = backgroundColor
@@ -125,8 +141,11 @@ fun QueueScreen(
 @Composable
 fun QueueItemRow(
     song: Song,
+    index: Int,
     isPlaying: Boolean,
     isNextUp: Boolean,
+    isSelected: Boolean,
+    isSelectMode: Boolean,
     viewModel: MainViewModel,
     textColor: Color,
     backgroundColor: Color
@@ -135,6 +154,8 @@ fun QueueItemRow(
         Color(0xFFF0F0F0)
     } else if (isPlaying) {
         Color(0xFF39C0F2).copy(alpha = 0.15f)
+    } else if (isSelected) {
+        Color(0xFF39C0F2).copy(alpha = 0.1f)
     } else {
         Color(0xFF161F35)
     }
@@ -144,21 +165,45 @@ fun QueueItemRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(itemBackground)
-            .clickable { viewModel.playSong(song.id) }
+            .clickable {
+                if (isSelectMode) {
+                    viewModel.toggleSongSelection(song.id)
+                } else {
+                    viewModel.playSong(song.id)
+                }
+            }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            Icons.Default.DragIndicator,
-            contentDescription = "Drag",
-            tint = textColor.copy(alpha = 0.4f),
-            modifier = Modifier
-                .size(20.dp)
-                .padding(end = 8.dp)
-        )
+        if (isSelectMode) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(
+                        if (isSelected) Color(0xFF39C0F2) else Color.Transparent
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        } else {
+            Icon(
+                Icons.Default.DragIndicator,
+                contentDescription = "Drag",
+                tint = textColor.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(end = 8.dp)
+            )
+        }
 
         Column(
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = if (isSelectMode) 8.dp else 0.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -174,7 +219,7 @@ fun QueueItemRow(
 
                 if (isNextUp) {
                     Text(
-                        "● Next",
+                        "• Next",
                         fontSize = 8.sp,
                         color = textColor.copy(alpha = 0.6f),
                         fontWeight = FontWeight.Bold,
@@ -192,7 +237,6 @@ fun QueueItemRow(
         }
 
         if (isPlaying) {
-            // Equalizer animation indicator
             Row(
                 modifier = Modifier.padding(start = 8.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(2.dp)

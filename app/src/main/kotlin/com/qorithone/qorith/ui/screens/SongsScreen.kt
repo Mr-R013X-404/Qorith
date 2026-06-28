@@ -12,16 +12,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,6 +41,8 @@ fun SongsScreen(
 ) {
     val songs = viewModel.songs.collectAsState().value
     val theme = viewModel.currentTheme.collectAsState().value
+    val searchQuery = viewModel.searchQuery.collectAsState().value
+    val (showSearch, setShowSearch) = remember { mutableStateOf(false) }
 
     val backgroundColor = when (theme) {
         "amoled" -> Color(0xFF000000)
@@ -51,6 +55,15 @@ fun SongsScreen(
     val textColor = when (theme) {
         "light", "amoledlight" -> Color(0xFF10172A)
         else -> Color(0xFFF2F5FA)
+    }
+
+    val filteredSongs = if (searchQuery.isNotEmpty()) {
+        songs.filter {
+            it.title.contains(searchQuery, ignoreCase = true) ||
+            it.folder.contains(searchQuery, ignoreCase = true)
+        }
+    } else {
+        songs
     }
 
     Column(
@@ -83,11 +96,9 @@ fun SongsScreen(
                 color = textColor
             )
 
-            // Spacer
             Box(modifier = Modifier.weight(1f))
 
-            // Icons
-            IconButton(onClick = { /* Search */ }) {
+            IconButton(onClick = { setShowSearch(!showSearch) }) {
                 Icon(Icons.Default.Search, contentDescription = "Search", tint = textColor)
             }
             IconButton(onClick = { /* Sort */ }) {
@@ -98,13 +109,50 @@ fun SongsScreen(
             }
         }
 
+        // Search Bar
+        if (showSearch) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(backgroundColor)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(textColor.copy(alpha = 0.1f))
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { viewModel.search(it) },
+                    modifier = Modifier.weight(1f),
+                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(
+                        color = textColor,
+                        fontSize = 14.sp
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                "Search songs, folders...",
+                                color = textColor.copy(alpha = 0.5f),
+                                fontSize = 14.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+                IconButton(onClick = { setShowSearch(false); viewModel.search("") }, modifier = Modifier.size(24.dp)) {
+                    Text("✕", color = textColor, fontSize = 16.sp)
+                }
+            }
+        }
+
         // Songs List
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            items(songs) { song ->
+            items(filteredSongs) { song ->
                 SongItem(
                     song = song,
                     viewModel = viewModel,
@@ -115,72 +163,4 @@ fun SongsScreen(
             }
         }
     }
-}
-
-@Composable
-fun SongItem(
-    song: com.qorithone.qorith.data.model.Song,
-    viewModel: MainViewModel,
-    navController: NavController,
-    textColor: Color,
-    backgroundColor: Color
-) {
-    val itemBackground = if (backgroundColor == Color(0xFFFFFFFF) || backgroundColor == Color(0xFFF4F6FA)) {
-        Color(0xFFF0F0F0)
-    } else {
-        Color(0xFF161F35)
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(itemBackground)
-            .clickable { viewModel.playSong(song.id) }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xFF39C0F2)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("♪", color = Color.White, fontSize = 18.sp)
-        }
-
-        Column(
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .weight(1f)
-        ) {
-            Text(
-                song.title,
-                fontSize = 13.5f.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = textColor,
-                maxLines = 1
-            )
-            Text(
-                song.folder,
-                fontSize = 11.5f.sp,
-                color = textColor.copy(alpha = 0.6f),
-                maxLines = 1
-            )
-        }
-
-        Text(
-            formatDuration(song.duration),
-            fontSize = 11.sp,
-            color = textColor.copy(alpha = 0.6f),
-            modifier = Modifier.padding(start = 12.dp)
-        )
-    }
-}
-
-fun formatDuration(ms: Long): String {
-    val seconds = (ms / 1000) % 60
-    val minutes = (ms / 1000) / 60
-    return "%d:%02d".format(minutes, seconds)
 }

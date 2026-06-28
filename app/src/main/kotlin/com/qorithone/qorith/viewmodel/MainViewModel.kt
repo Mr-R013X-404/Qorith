@@ -1,7 +1,10 @@
 package com.qorithone.qorith.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
 import com.qorithone.qorith.data.model.RepeatMode
 import com.qorithone.qorith.data.model.Song
 import com.qorithone.qorith.data.model.Playlist
@@ -9,6 +12,7 @@ import com.qorithone.qorith.data.repository.SongRepository
 import com.qorithone.qorith.data.repository.PlaylistRepository
 import com.qorithone.qorith.data.repository.QueueRepository
 import com.qorithone.qorith.ui.screens.PlaylistItemUI
+import com.qorithone.qorith.util.MusicScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,9 +58,31 @@ class MainViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
+    private val _selectedSongs = MutableStateFlow<Set<String>>(emptySet())
+    val selectedSongs: StateFlow<Set<String>> = _selectedSongs.asStateFlow()
+
+    private val _isSelectMode = MutableStateFlow(false)
+    val isSelectMode: StateFlow<Boolean> = _isSelectMode.asStateFlow()
+
+    private var player: ExoPlayer? = null
+
     init {
         loadAllSongs()
         loadPlaylists()
+    }
+
+    fun scanMusicLibrary(context: Context) {
+        viewModelScope.launch {
+            try {
+                val scannedSongs = MusicScanner.scanMusicLibrary(context)
+                scannedSongs.forEach { song ->
+                    songRepository.insertSong(song)
+                }
+                loadAllSongs()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun loadAllSongs() {
@@ -74,7 +100,7 @@ class MainViewModel @Inject constructor(
                     PlaylistItemUI(
                         id = playlist.id,
                         name = playlist.name,
-                        songCount = 0, // Will be updated separately
+                        songCount = 0,
                         isSystem = playlist.isSystem
                     )
                 }
@@ -154,6 +180,61 @@ class MainViewModel @Inject constructor(
         _queue.value = emptyList()
         viewModelScope.launch {
             queueRepository.clearQueue()
+        }
+    }
+
+    fun reorderQueue(fromIndex: Int, toIndex: Int) {
+        val currentQueue = _queue.value.toMutableList()
+        val item = currentQueue.removeAt(fromIndex)
+        currentQueue.add(toIndex, item)
+        _queue.value = currentQueue
+    }
+
+    // Multi-select functionality
+    fun toggleSelectMode() {
+        _isSelectMode.value = !_isSelectMode.value
+        if (!_isSelectMode.value) {
+            _selectedSongs.value = emptySet()
+        }
+    }
+
+    fun toggleSongSelection(songId: String) {
+        val currentSelection = _selectedSongs.value.toMutableSet()
+        if (currentSelection.contains(songId)) {
+            currentSelection.remove(songId)
+        } else {
+            currentSelection.add(songId)
+        }
+        _selectedSongs.value = currentSelection
+    }
+
+    fun selectAllSongs() {
+        _selectedSongs.value = _songs.value.map { it.id }.toSet()
+    }
+
+    fun clearSelection() {
+        _selectedSongs.value = emptySet()
+    }
+
+    fun deleteSelectedSongs() {
+        viewModelScope.launch {
+            _selectedSongs.value.forEach { songId ->
+                val song = _songs.value.find { it.id == songId }
+                if (song != null) {
+                    // Remove from queue if present
+                    _queue.value = _queue.value.filter { it != songId }
+                }
+            }
+            clearSelection()
+        }
+    }
+
+    fun addSelectedToPlaylist(playlistId: String) {
+        viewModelScope.launch {
+            _selectedSongs.value.forEachIndexed { index, songId ->
+                playlistRepository.addSongToPlaylist(playlistId, songId, index)
+            }
+            clearSelection()
         }
     }
 }

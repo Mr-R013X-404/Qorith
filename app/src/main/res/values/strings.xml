@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Qorith</string>
+    <string name="app_name">Qorith Player</string>
+    <string name="app_name_short">Qorith</string>
     <string name="songs">Songs</string>
     <string name="folders">Folders</string>
     <string name="playlists">Playlists</string>
