@@ -13,9 +13,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,13 +33,9 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.qorithone.qorith.viewmodel.MainViewModel
 
-data class FolderItem(
-    val name: String,
-    val songCount: Int
-)
-
 @Composable
-fun FoldersScreen(
+fun FolderDetailScreen(
+    folderName: String,
     viewModel: MainViewModel,
     navController: NavController
 ) {
@@ -58,9 +55,7 @@ fun FoldersScreen(
         else -> Color(0xFFF2F5FA)
     }
 
-    val folders = songs.groupBy { it.folder }
-        .map { (name, folderSongs) -> FolderItem(name, folderSongs.size) }
-        .sortedBy { it.name }
+    val folderSongs = songs.filter { it.folder == folderName }
 
     Column(
         modifier = Modifier
@@ -75,14 +70,19 @@ fun FoldersScreen(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = textColor)
+            }
             Text(
-                "Folders",
+                folderName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = textColor
+                color = textColor,
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .weight(1f),
+                maxLines = 1
             )
-
-            Box(modifier = Modifier.weight(1f))
 
             IconButton(onClick = { /* Search */ }) {
                 Icon(Icons.Default.Search, contentDescription = "Search", tint = textColor)
@@ -90,20 +90,40 @@ fun FoldersScreen(
             IconButton(onClick = { /* Sort */ }) {
                 Icon(Icons.Default.Sort, contentDescription = "Sort", tint = textColor)
             }
-            IconButton(onClick = { navController.navigate("settings") }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = textColor)
-            }
         }
 
-        // Folders List
+        // Action Buttons
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+        ) {
+            ActionButton(
+                icon = Icons.Default.PlayArrow,
+                label = "Play",
+                onClick = { /* Play all */ },
+                modifier = Modifier.weight(1f),
+                textColor = textColor
+            )
+            ActionButton(
+                icon = Icons.Default.Shuffle,
+                label = "Shuffle",
+                onClick = { /* Shuffle play */ },
+                modifier = Modifier.weight(1f),
+                textColor = textColor
+            )
+        }
+
+        // Songs List
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            items(folders) { folder ->
-                FolderItemRow(
-                    folder = folder,
+            items(folderSongs) { song ->
+                SongItem(
+                    song = song,
                     viewModel = viewModel,
                     navController = navController,
                     textColor = textColor,
@@ -115,61 +135,34 @@ fun FoldersScreen(
 }
 
 @Composable
-fun FolderItemRow(
-    folder: FolderItem,
-    viewModel: MainViewModel,
-    navController: NavController,
-    textColor: Color,
-    backgroundColor: Color
+fun ActionButton(
+    icon: androidx.compose.material.icons.Icons,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    textColor: Color
 ) {
-    val itemBackground = if (backgroundColor == Color(0xFFFFFFFF) || backgroundColor == Color(0xFFF4F6FA)) {
-        Color(0xFFF0F0F0)
-    } else {
-        Color(0xFF161F35)
-    }
-
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(itemBackground)
-            .clickable { navController.navigate("folderDetail/${folder.name}") }
-            .padding(12.dp),
+            .background(Color(0xFF39C0F2).copy(alpha = 0.12f))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xFF0F4FA8)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Default.FolderOpen,
-                contentDescription = "Folder",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .padding(start = 12.dp)
-                .weight(1f)
-        ) {
-            Text(
-                folder.name,
-                fontSize = 13.5f.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = textColor,
-                maxLines = 1
-            )
-            Text(
-                "${folder.songCount} songs",
-                fontSize = 11.5f.sp,
-                color = textColor.copy(alpha = 0.6f),
-                maxLines = 1
-            )
-        }
+        Icon(
+            icon,
+            contentDescription = label,
+            tint = Color(0xFF39C0F2),
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFF39C0F2),
+            modifier = Modifier.padding(start = 6.dp)
+        )
     }
 }

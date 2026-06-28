@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qorithone.qorith.data.model.RepeatMode
 import com.qorithone.qorith.data.model.Song
+import com.qorithone.qorith.data.model.Playlist
 import com.qorithone.qorith.data.repository.SongRepository
 import com.qorithone.qorith.data.repository.PlaylistRepository
 import com.qorithone.qorith.data.repository.QueueRepository
+import com.qorithone.qorith.ui.screens.PlaylistItemUI
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +29,9 @@ class MainViewModel @Inject constructor(
 
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs.asStateFlow()
+
+    private val _playlists = MutableStateFlow<List<PlaylistItemUI>>(emptyList())
+    val playlists: StateFlow<List<PlaylistItemUI>> = _playlists.asStateFlow()
 
     private val _currentPlayingSong = MutableStateFlow<Song?>(null)
     val currentPlayingSong: StateFlow<Song?> = _currentPlayingSong.asStateFlow()
@@ -51,12 +56,28 @@ class MainViewModel @Inject constructor(
 
     init {
         loadAllSongs()
+        loadPlaylists()
     }
 
-    fun loadAllSongs() {
+    private fun loadAllSongs() {
         viewModelScope.launch {
             songRepository.getAllSongs().collect { songs ->
                 _songs.value = songs
+            }
+        }
+    }
+
+    private fun loadPlaylists() {
+        viewModelScope.launch {
+            playlistRepository.getAllPlaylists().collect { playlists ->
+                _playlists.value = playlists.map { playlist ->
+                    PlaylistItemUI(
+                        id = playlist.id,
+                        name = playlist.name,
+                        songCount = 0, // Will be updated separately
+                        isSystem = playlist.isSystem
+                    )
+                }
             }
         }
     }
@@ -110,6 +131,22 @@ class MainViewModel @Inject constructor(
         if (!currentQueue.contains(songId)) {
             currentQueue.add(songId)
             _queue.value = currentQueue
+        }
+    }
+
+    fun playAllSongs(songIds: List<String>) {
+        _queue.value = songIds
+        if (songIds.isNotEmpty()) {
+            playSong(songIds[0])
+        }
+    }
+
+    fun shufflePlaySongs(songIds: List<String>) {
+        val shuffled = songIds.shuffled()
+        _queue.value = shuffled
+        _shuffle.value = true
+        if (shuffled.isNotEmpty()) {
+            playSong(shuffled[0])
         }
     }
 

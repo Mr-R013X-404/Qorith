@@ -14,42 +14,32 @@ A premium, lightweight, offline music player for Android built with privacy and 
 - **Material Design 3**: Modern, clean, professional UI
 - **Media3 & ExoPlayer**: Robust audio playback
 
+## Screens Implemented
+
+- ✅ **Splash Screen** - Animated intro with logo
+- ✅ **Songs Screen** - List all songs with playback controls
+- ✅ **Folders Screen** - Browse music by folders
+- ✅ **Folder Detail** - View songs in a specific folder
+- ✅ **Playlists Screen** - Manage custom playlists
+- ✅ **Playlist Detail** - View songs in a playlist
+- ✅ **Now Playing Screen** - Full playback controls, seek bar, shuffle/repeat
+- ✅ **Queue Screen** - Drag-and-drop queue management
+- ✅ **Settings Screen** - Theme selection, playback settings
+- ✅ **About Screen** - App info, developer credits
+
+## Architecture
+
+- **MVVM Pattern** with Jetpack Compose
+- **Room Database** for local persistence
+- **Hilt Dependency Injection**
+- **Coroutines** for async operations
+- **StateFlow** for reactive UI updates
+
 ## Requirements
 
 - Android 8.0+ (minSdk 26)
 - Android Studio Hedgehog or newer
 - Kotlin 1.9.20+
-
-## Project Structure
-
-```
-app/
-├── src/main/
-│   ├── kotlin/com/qorithone/qorith/
-│   │   ├── ui/                 # Compose screens
-│   │   ├── viewmodel/          # ViewModels
-│   │   ├── data/               # Data layer
-│   │   │   ├── model/          # Data models
-│   │   │   ├── dao/            # Room DAOs
-│   │   │   ├── db/             # Database
-│   │   │   ├── repository/     # Repositories
-│   │   │   └── di/             # Dependency injection
-│   │   ├── service/            # Services
-│   │   └── util/               # Utilities
-│   └── res/                    # Resources
-├── build.gradle.kts            # App build config
-└── proguard-rules.pro          # ProGuard rules
-```
-
-## Stack
-
-- **Jetpack Compose**: UI framework
-- **Material Design 3**: Design system
-- **Kotlin Coroutines**: Async operations
-- **Room Database**: Local data persistence
-- **Hilt**: Dependency injection
-- **Media3/ExoPlayer**: Audio playback
-- **Navigation Compose**: Navigation
 
 ## Building
 
@@ -59,16 +49,7 @@ app/
 
 # Build release APK
 ./gradlew assembleRelease
-
-# Run on device/emulator
-./gradlew installDebug
 ```
-
-## Permissions
-
-- `READ_EXTERNAL_STORAGE` – Read music files
-- `WAKE_LOCK` – Keep device awake during playback
-- `FOREGROUND_SERVICE` – Background audio playback
 
 ## Privacy
 
@@ -79,10 +60,6 @@ Qorith is completely offline:
 - ✅ No tracking
 - ✅ No internet dependency
 - ✅ No data collection
-
-## License
-
-Private – QorithOne
 
 ## Author
 
